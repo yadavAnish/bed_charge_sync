@@ -95,23 +95,27 @@ class BedSyncEngine(models.Model):
                 patient_display = data["patient"]["display"]
                 patient_id = patient_display.split(" - ")[0].strip()
 
-                # start_dt_raw = data.get("startDatetime")
-                # end_dt_raw = data.get("endDatetime")
+                start_dt_raw = data.get("startDatetime")
+                end_dt_raw = data.get("endDatetime")
 
-                # if not end_dt_raw:
-                #     _logger.info("[SKIP] Bed assignment %s has no endDatetime", encounter_uuid)
-                #     continue
+                if not end_dt_raw:
+                    _logger.info("[SKIP] Bed assignment %s has no endDatetime", encounter_uuid)
+                    continue
 
-                # try:
-                #     start_dt = dateutil.parser.parse(start_dt_raw)
-                #     _logger.info("start_dt=%s",start_dtßßß)
-                #     end_dt = dateutil.parser.parse(end_dt_raw)
-                # except Exception:
-                #     _logger.exception("❌ Failed to parse start/end datetime")
-                #     continue
+                sdt=datetime.strptime(start_dt_raw, "%Y-%m-%dT%H:%M:%S.%f%z")
+                start_formatted_date = sdt.strftime("%Y-%m-%d")
 
-                # num_days = max((end_dt - start_dt).days, 1)
-                # _logger.info("numdays=%s",num_days)
+
+                edt=datetime.strptime(end_dt_raw, "%Y-%m-%dT%H:%M:%S.%f%z")
+                end_start_formatted_date = edt.strftime("%Y-%m-%d")
+
+
+                num_days = days_diff = (edt - sdt).days
+                if num_days==0:
+                    num_days=1
+                _logger.error(num_days)
+
+                _logger.info("numdays=%s",num_days)
 
                 if bed_number.startswith("G"):
                     fee = 2000
@@ -122,14 +126,6 @@ class BedSyncEngine(models.Model):
                 else:
                     _logger.info("[SKIP] Invalid bed prefix: %s", bed_number)
                     continue
-
-                # _logger.debug("💰 Calculated charge: %s x %s day(s) = %s", fee, num_days, fee * num_days)
-
-                # partner = self.env['res.partner'].search([('name', '=', patient_id.ref)], limit=1)
-                # _logger.info("Patient Name =%s",partner)
-                # if not partner:
-                #     partner = self.env['res.partner'].create({'name': patient_id, 'customer_rank': 1})
-                #     _logger.info("👤 Created partner: %s", partner.name)
 
 
                 # Extract display name like: "Anish Kumar Yadav [ABC200000]"
@@ -157,9 +153,8 @@ class BedSyncEngine(models.Model):
                     'shop_id': SHOP_ID,
                     'order_line': [(0, 0, {
                         'product_id': product.id,
-                        'product_uom_qty': 1,
+                        'product_uom_qty': num_days,
                         'price_unit': fee,
-                        # 'name': f"Bed {bed_number} - {num_days} day(s)"
                     })]
                 })
 
@@ -169,7 +164,7 @@ class BedSyncEngine(models.Model):
                     'encounter_uuid': encounter_uuid,
                     'patient_id': patient_id,
                     'bed_number': bed_number,
-                    'fee': fee * 1,
+                    'fee': fee * num_days,
                     'status': 'success',
                     'message': f"Order {order.name} for {num_days} day(s) created"
                 })
