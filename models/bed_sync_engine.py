@@ -74,9 +74,9 @@ class BedSyncEngine(models.Model):
             encounter_uuid = content_url.split("/")[-1].split("?")[0]
             _logger.info("📡 Fetching bed assignment from URL: %s", content_url)
 
-            # if self.env['bed.sync.log'].search_count([('encounter_uuid', '=', encounter_uuid)]):
-            #     _logger.info("[SKIP] Already synced: %s", encounter_uuid)
-            #     continue
+            if self.env['bed.sync.log'].search_count([('encounter_uuid', '=', encounter_uuid)]):
+                _logger.info("[SKIP] Already synced: %s", encounter_uuid)
+                continue
 
             try:
                 _logger.debug("🌐 Sending GET request to: %s", content_url)
